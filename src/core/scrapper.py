@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
+from selenium.common.exceptions import NoSuchElementException
 
 import utils.definitions as definitions
 import utils.credentials_management as credentials_management
@@ -128,6 +129,14 @@ def render_logout(driver):
 
 # ---------- CREATE NEW DATABASE SCRAPING ----------
 def create_new_database(driver):
+    """
+    Create a new PostgreSQL database on Render.
+    Args:
+        driver (Page): The Playwright Page instance currently on the dashboard.
+    Returns:
+        str: The name of the created database.
+    """
+    
     # Navigate to the "Create New Database" page
     driver.get(definitions.RENDER_CREATE_NEW_DATABASE_URL)
 
@@ -173,6 +182,9 @@ def get_active_databases(driver) -> list[dict]:
     Returns:
         list[dict]: A list of dictionaries, each representing a database with its metadata.
     """
+
+    logger.info("🔄 Getting active databases...")
+
     # Navigate to the main dashboard page
     driver.get(definitions.RENDER_URL)
 
