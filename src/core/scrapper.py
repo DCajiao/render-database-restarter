@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 # ---------- CHROME HEADLESS CONFIGURATION ----------
 def start_browser():
+    """
+    Launch an undetected Chrome browser with headless configuration.
+
+    Returns:
+        webdriver.Chrome: A Selenium WebDriver instance with stealth settings.
+    """
     try:
         logger.info("Starting undetected browser")
         options = uc.ChromeOptions()
@@ -47,6 +53,12 @@ def start_browser():
 
 
 def close_browser(driver):
+    """
+    Safely closes the browser instance.
+
+    Args:
+        driver (webdriver.Chrome): The Selenium WebDriver to be closed.
+    """
     try:
         driver.quit()
         logger.info("✔ Browser closed")
@@ -55,8 +67,19 @@ def close_browser(driver):
 
 # ---------- LOGIN SCRAPING ----------
 def render_login(driver):
-    #### ---------- ENV VARIABLES ---------- ####
-    # -> EMAIL, PASSWORD
+    """
+    Logs into the Render dashboard using credentials from environment variables.
+
+    Args:
+        driver (webdriver.Chrome): An initialized WebDriver instance.
+
+    Returns:
+        webdriver.Chrome: The logged-in WebDriver instance.
+
+    Raises:
+        ValueError: If required environment variables are missing.
+        RuntimeError: If the browser could not be started.
+    """
     credentials = credentials_management.load_credentials()
     if not credentials['EMAIL'] or not credentials['PASSWORD']:
         logger.error(
@@ -114,6 +137,12 @@ def render_login(driver):
 
 
 def render_logout(driver):
+    """
+    Logs out the current user from the Render dashboard.
+
+    Args:
+        driver (webdriver.Chrome): The logged-in WebDriver instance.
+    """
     # TODO: FIX THIS FUNCTION
     try:
         # Click on the user icon to open the dropdown menu
@@ -135,13 +164,13 @@ def render_logout(driver):
 
 def go_to_dashboard(driver):
     """
-    Navigate to the Render dashboard page.
+    Navigates to the main Render dashboard page and waits for it to fully load.
 
     Args:
-        driver (Page): The Playwright Page instance currently on the dashboard.
+        driver (webdriver.Chrome): The WebDriver instance.
 
     Returns:
-        driver (Page): The Playwright Page instance after navigating to the dashboard.
+        webdriver.Chrome: The same instance, now on the dashboard page.
     """
     try:
         logger.info("🔄 Navigating to the Render dashboard...")
@@ -161,11 +190,15 @@ def go_to_dashboard(driver):
 # ---------- CREATE NEW DATABASE SCRAPING ----------
 def create_new_database(driver):
     """
-    Create a new PostgreSQL database on Render.
+    Creates a new PostgreSQL database using Render's UI.
+
+    Navigates to the database creation page, fills the form, and submits it using default settings.
+
     Args:
-        driver (Page): The Playwright Page instance currently on the dashboard.
+        driver (webdriver.Chrome): The WebDriver instance.
+
     Returns:
-        str: The name of the created database.
+        str: The name of the newly created database.
     """
 
     # Navigate to the "Create New Database" page
@@ -210,13 +243,13 @@ def create_new_database(driver):
 # ---------- GET ACTIVE DATABASES ----------
 def get_active_databases(driver) -> list[dict]:
     """
-    Extract the list of active databases from the main dashboard.
+    Retrieves a list of currently active PostgreSQL 16 databases from the Render dashboard.
 
     Args:
-        driver (Page): The Playwright Page instance currently on the dashboard.
+        driver (webdriver.Chrome): The WebDriver instance.
 
     Returns:
-        list[dict]: A list of dictionaries, each representing a database with its metadata.
+        list[dict]: A list of dictionaries with keys: name, status, runtime, region, deployed_at.
     """
 
     logger.info("🔄 Getting active databases...")
@@ -278,15 +311,27 @@ def get_active_databases(driver) -> list[dict]:
 # ---------- GET DATABASE CREDENTIALS ----------
 def get_active_database_credentials(driver, db_name: str) -> dict:
     """
-    Scrape the credentials of a specific database from the Render dashboard.
-    This function navigates to the database's detail page and extracts the credentials.
+    Fetches connection credentials of a specified database.
+
+    Navigates to the database detail page, reveals hidden secrets, and scrapes all fields.
 
     Args:
-        driver (Page): The Playwright Page instance currently on the dashboard.
-        db_name (str): The name of the database whose credentials are to be extracted.
+        driver (webdriver.Chrome): The WebDriver instance.
+        db_name (str): The exact name of the database to search for.
 
     Returns:
-        dict: A dictionary containing the database credentials, including hostname, port, database name, username, password, internal URL, external URL, and psql command.
+        dict: A dictionary with credentials, including:
+            - hostname
+            - port
+            - database
+            - username
+            - password
+            - internal_url
+            - external_url
+            - psql_command
+
+    Raises:
+        ValueError: If the database name is not found.
     """
 
     logger.info(f"🔄 Getting credentials for active database '{db_name}'...")
@@ -360,14 +405,20 @@ def get_active_database_credentials(driver, db_name: str) -> dict:
 # ---------- DELETE DATABASE ----------
 def delete_active_database(driver, db_name: str) -> None:
     """
-    Delete an active database from the Render dashboard.
+    Deletes a specific database from the Render dashboard.
+
+    Navigates to the database detail view, scrolls to the bottom, triggers the delete modal,
+    fills the confirmation command, and submits the deletion.
 
     Args:
-        driver (Page): The Playwright Page instance currently on the dashboard.
-        db_name (str): The name of the database to be deleted.
+        driver (webdriver.Chrome): The WebDriver instance.
+        db_name (str): The name of the database to delete.
 
     Returns:
         None
+
+    Raises:
+        ValueError: If the target database is not found on the dashboard.
     """
 
     logger.info(f"🔄 Deleting active database '{db_name}'...")
