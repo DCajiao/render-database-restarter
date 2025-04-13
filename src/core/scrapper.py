@@ -234,3 +234,82 @@ def get_active_databases(driver) -> list[dict]:
             continue
 
     return databases
+
+# ---------- GET DATABASE CREDENTIALS ----------
+def get_active_database_credentials(driver, db_name: str) -> dict:
+    """
+    Scrape the credentials of a specific database from the Render dashboard.
+    This function navigates to the database's detail page and extracts the credentials.
+    
+    Args:
+        driver (Page): The Playwright Page instance currently on the dashboard.
+        db_name (str): The name of the database whose credentials are to be extracted.
+    
+    Returns:
+        dict: A dictionary containing the database credentials, including hostname, port, database name, username, password, internal URL, external URL, and psql command.
+    """
+
+    logger.info(f"🔄 Getting credentials for active database '{db_name}'...")
+
+    # Navigate to the main dashboard page
+    driver.get(definitions.RENDER_URL)
+
+    # Wait for the table body to load completely
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "tbody"))
+    )
+
+    # Select all rows within the table and find the target link
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+    target_link = None
+
+    for row in rows:
+        try:
+            name_el = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a span")
+            name = name_el.text.strip()
+            if name.lower() == db_name.lower():
+                target_link = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a")
+                break
+        except NoSuchElementException:
+            continue
+
+    if not target_link:
+        msg = f"❌ The database '{db_name}' does not exist or is not available."
+        logger.error(msg)
+        raise ValueError(msg)
+
+    # Click on the target link to enter the database detail page
+    target_link.click()
+
+    # Wait for the page to load
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.ID, "connections"))
+    )
+
+    # Click on the button to show the database credentials (Hide/Show)
+    show_buttons = driver.find_elements(By.CSS_SELECTOR, "button[aria-label='Show secret']")
+    for btn in show_buttons:
+        try:
+            btn.click()
+        except:
+            pass  # Ignore if the button is not clickable
+
+    # Get the database credentials
+    def get_input_value(id_):
+        try:
+            return driver.find_element(By.ID, id_).get_attribute("value")
+        except NoSuchElementException:
+            return None
+
+    credentials = {
+        "hostname": get_input_value("database-hostname"),
+        "port": get_input_value("database-port"),
+        "database": get_input_value("database-name"),
+        "username": get_input_value("database-username"),
+        "password": get_input_value("database-password"),
+        "internal_url": get_input_value("internal-database-url"),
+        "external_url": get_input_value("external-database-url"),
+        "psql_command": get_input_value("psql-command"),
+    }
+
+    return credentials
