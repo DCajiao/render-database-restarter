@@ -338,3 +338,86 @@ def get_active_database_credentials(driver, db_name: str) -> dict:
     }
 
     return credentials
+
+# ---------- DELETE DATABASE ----------
+def delete_active_database(driver, db_name: str) -> None:
+    """
+    Delete an active database from the Render dashboard.
+    
+    Args:
+        driver (Page): The Playwright Page instance currently on the dashboard.
+        db_name (str): The name of the database to be deleted.
+    
+    Returns:
+        None
+    """
+    
+    logger.info(f"🔄 Deleting active database '{db_name}'...")
+    
+    # Navigate to the main dashboard page
+    driver = go_to_dashboard(driver)
+
+    # Wait for the table body to load completely
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "tbody"))
+    )
+
+    # Find the target database link
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+    target_link = None
+
+    for row in rows:
+        try:
+            name_el = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a span")
+            name = name_el.text.strip()
+            if name.lower() == db_name.lower():
+                target_link = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a")
+                break
+        except:
+            continue
+
+    if not target_link:
+        msg = f"❌ The database '{db_name}' does not exist or is not available."
+        logger.error(msg)
+        raise ValueError(msg)
+
+    target_link.click()
+
+    # Wait for the page to load
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.ID, "connections"))
+    )
+
+    # Scroll down to the bottom of the page to load the "Delete" button
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+    # Wait for the "Delete" button to be clickable
+    delete_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Delete')]"))
+    )
+    delete_button.click()
+
+    # Wait for the confirmation modal to appear
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "confirm-delete"))
+    )
+
+    # Extract the text from the confirmation modal
+    confirm_text_el = driver.find_element(
+        By.XPATH,
+        "//form[@id='confirm-delete']//span[contains(@class, 'status-critical-text')]"
+    )
+    confirm_text = confirm_text_el.text.strip()
+
+    # Write the confirmation text in the input field
+    input_el = driver.find_element(By.ID, "sudo-command")
+    input_el.send_keys(confirm_text)
+
+    # Wait for the "Confirm" button to be clickable
+    confirm_btn = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//button[@data-testid='confirm-delete-button']"))
+    )
+    confirm_btn.click()
+
+    logger.info(f"✅ Database '{db_name}' deletion initiated.")
+    
