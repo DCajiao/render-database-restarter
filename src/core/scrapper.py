@@ -175,50 +175,50 @@ def get_active_databases(driver) -> list[dict]:
     """
     # Navigate to the main dashboard page
     driver.get(definitions.RENDER_URL)
-    
+
     # Wait for the table body to load completely
     WebDriverWait(driver, 15).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "tbody"))
     )
 
     # Select all rows within the table
-    rows = driver.query_selector_all("tbody tr")
-
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
     databases = []
 
     for row in rows:
-        # Extract the 'Service Name' text
-        name_element = row.query_selector("td:nth-child(3) a span")
-        name = name_element.inner_text().strip() if name_element else None
+        try:
+            # Extract the 'Service Name' text
+            name_element = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a span")
+            name = name_element.text.strip()
 
-        # Extract the 'Status' text
-        status_element = row.query_selector("td:nth-child(4) span[title]")
-        status = status_element.get_attribute("title") if status_element else None
+            # Extract the 'Status' text
+            status_element = row.find_element(By.CSS_SELECTOR, "td:nth-child(4) span[title]")
+            status = status_element.get_attribute("title")
 
-        # Extract the 'Runtime' text
-        runtime_element = row.query_selector("td:nth-child(5) span[title]")
-        runtime = runtime_element.get_attribute("title") if runtime_element else None
+            # Extract the 'Runtime' text
+            runtime_element = row.find_element(By.CSS_SELECTOR, "td:nth-child(5) span[title]")
+            runtime = runtime_element.get_attribute("title")
 
-        # Extract the 'Region' text
-        region_element = row.query_selector("td:nth-child(6)")
-        region = region_element.inner_text().strip() if region_element else None
+            # Extract the 'Region' text
+            region_element = row.find_element(By.CSS_SELECTOR, "td:nth-child(6)")
+            region = region_element.text.strip()
 
-        # Extract the 'Deployed Time' ISO value
-        deployed_element = row.query_selector("td:nth-child(7) time")
-        deployed = deployed_element.get_attribute("datetime") if deployed_element else None
+            # Extract the 'Deployed Time' ISO value
+            deployed_element = row.find_element(By.CSS_SELECTOR, "td:nth-child(7) time")
+            deployed = deployed_element.get_attribute("datetime")
 
-        # Skip if essential data is missing
-        if not name or not status:
+            # Only include databases that are actually running/active
+            if name and status and status.lower() in ["available", "deployed"] and runtime.lower() == "postgresql 16":
+                databases.append({
+                    "name": name,
+                    "status": status,
+                    "runtime": runtime,
+                    "region": region,
+                    "deployed_at": deployed,
+                })
+
+        except Exception as e:
+            logger.warning(f"❌ Error extracting service info: {e}")
             continue
-
-        # Only include databases that are actually running/active
-        if status.lower() in ["available", "deployed"]:
-            databases.append({
-                "name": name,
-                "status": status,
-                "runtime": runtime,
-                "region": region,
-                "deployed_at": deployed,
-            })
 
     return databases
