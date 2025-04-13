@@ -134,8 +134,6 @@ def render_login():
         logger.error("❌ Timeout error: Login page took too long to load.")
     except Exception as e:
         logger.error(f"❌ Error during login: {e}")
-    # finally:
-    #     driver.quit()
 
 
 def render_logout(driver):
