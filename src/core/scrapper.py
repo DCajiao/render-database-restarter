@@ -1,14 +1,16 @@
 import logging
 import random
 import string
+import time
+from datetime import datetime, timedelta, timezone
 
+import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import undetected_chromedriver as uc
 from selenium.common.exceptions import NoSuchElementException
 
 import utils.definitions as definitions
@@ -66,7 +68,7 @@ def close_browser(driver):
         logger.error(f"Error closing browser: {e}")
 
 # ---------- LOGIN SCRAPING ----------
-def render_login(driver):
+def render_login():
     """
     Logs into the Render dashboard using credentials from environment variables.
 
@@ -307,6 +309,98 @@ def get_active_databases(driver) -> list[dict]:
             continue
 
     return databases
+
+
+def get_database_status(driver, db_name: str) -> dict:
+    """
+    Get the usage status of a specific Render PostgreSQL database.
+    This includes time since deployment, remaining time before expiration (750h limit),
+    and storage usage percentage.
+
+    Args:
+        driver (webdriver.Chrome): The active browser session.
+        db_name (str): Name of the database.
+
+    Returns:
+        dict: {
+            'deployed_at': str (ISO timestamp),
+            'hours_used': float,
+            'hours_left': float,
+            'percentage_used': float,
+            'estimated_expiration': str (UTC datetime),
+            'storage_used_percent': float
+        }
+    """
+    logger.info(f"🔍 Checking status for database '{db_name}'...")
+
+    # Retrieve the list of active databases using the existing driver session
+    databases = get_active_databases(driver)
+    db = next((d for d in databases if d["name"].lower() == db_name.lower()), None)
+
+    if not db:
+        logger.error(f"❌ Database '{db_name}' not found.")
+        raise ValueError(f"Database '{db_name}' not found.")
+
+    # Parse deployment time
+    deployed_at = db["deployed_at"]
+    deployed_dt = datetime.fromisoformat(deployed_at.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+
+
+    hours_used = (now - deployed_dt).total_seconds() / 3600
+    hours_left = max(0, definitions.DB_MAX_HOURS - hours_used)
+    percentage_used = min(100, (hours_used / definitions.DB_MAX_HOURS) * 100)
+    estimated_expiration = deployed_dt + timedelta(hours=definitions.DB_MAX_HOURS)
+
+    driver = go_to_dashboard(driver)
+
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "tbody"))
+    )
+
+    rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+    target_link = None
+
+    for row in rows:
+        try:
+            name_el = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a span")
+            name = name_el.text.strip()
+            if name.lower() == db_name.lower():
+                target_link = row.find_element(By.CSS_SELECTOR, "td:nth-child(3) a")
+                break
+        except:
+            continue
+
+    if not target_link:
+        logger.error(f"❌ Could not find link to database '{db_name}'")
+        raise ValueError(f"Could not locate link for database '{db_name}'")
+
+    target_link.click()
+
+    # Wait for the page to load
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.ID, "general"))
+    )
+
+    # Extract the text of the "Storage Used" element
+    try:
+        storage_info = driver.find_element(
+            By.XPATH, "//div[@aria-label='storage used']//div[contains(@class, 'font-semibold')]"
+        ).text
+        storage_used_percent = float(storage_info.split('%')[0])/100
+    except Exception as e:
+        logger.warning(f"⚠️ Could not extract storage percentage: {e}")
+        storage_used_percent = None
+
+
+    return {
+        "deployed_at": deployed_at,
+        "hours_used": round(hours_used, 2),
+        "hours_left": round(hours_left, 2),
+        "percentage_used": round(percentage_used, 2),
+        "estimated_expiration": estimated_expiration.strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "storage_used_percent": storage_used_percent,
+    }
 
 # ---------- GET DATABASE CREDENTIALS ----------
 def get_active_database_credentials(driver, db_name: str) -> dict:
