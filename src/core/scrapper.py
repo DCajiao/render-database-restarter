@@ -128,6 +128,31 @@ def render_logout(driver):
     except Exception as e:
         logger.error(f"❌ Error during logout: {e}")
 
+def go_to_dashboard(driver):
+    """
+    Navigate to the Render dashboard page.
+    
+    Args:
+        driver (Page): The Playwright Page instance currently on the dashboard.
+    
+    Returns:
+        driver (Page): The Playwright Page instance after navigating to the dashboard.
+    """
+    try:
+        logger.info("🔄 Navigating to the Render dashboard...")
+        driver.get(definitions.RENDER_URL)
+        
+        # Wait for the dashboard to load
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "tbody"))
+        )
+    except TimeoutError:
+        logger.error("❌ Timeout error: Dashboard page took too long to load.")
+    except Exception as e:
+        logger.error(f"❌ Error during navigation: {e}")
+    finally:
+        return driver
+
 # ---------- CREATE NEW DATABASE SCRAPING ----------
 def create_new_database(driver):
     """
@@ -187,7 +212,7 @@ def get_active_databases(driver) -> list[dict]:
     logger.info("🔄 Getting active databases...")
 
     # Navigate to the main dashboard page
-    driver.get(definitions.RENDER_URL)
+    driver = go_to_dashboard(driver)
 
     # Wait for the table body to load completely
     WebDriverWait(driver, 15).until(
@@ -252,7 +277,7 @@ def get_active_database_credentials(driver, db_name: str) -> dict:
     logger.info(f"🔄 Getting credentials for active database '{db_name}'...")
 
     # Navigate to the main dashboard page
-    driver.get(definitions.RENDER_URL)
+    driver = go_to_dashboard(driver)
 
     # Wait for the table body to load completely
     WebDriverWait(driver, 15).until(
