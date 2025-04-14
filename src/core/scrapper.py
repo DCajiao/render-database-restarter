@@ -61,6 +61,7 @@ def close_browser(driver):
     Args:
         driver (webdriver.Chrome): The Selenium WebDriver to be closed.
     """
+    #TODO: I have an issue with closing the browser, it doesn't close properly
     try:
         driver.quit()
         logger.info("✔ Browser closed")
