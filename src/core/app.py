@@ -37,16 +37,16 @@ def migration_status():
             logger.info("❌ No database found.")
             return {"msg": "No active databases found."}
     except Exception as e:
-        logger.info(f"❌ There was an error getting the active databases: {e}")
+        logger.error(f"❌ There was an error getting the active databases: {e}")
         return None
 
     # Get the database status
     try:
         database_status = scrapper.get_database_status(driver, database_name)
-        logger.info(f"✅ Database status: {database_status}")
+        logger.debug(f"✅ Database status: {database_status}")
         pass
     except Exception as e:
-        logger.info(f"❌ There was an error getting the database status: {e}")
+        logger.error(f"❌ There was an error getting the database status: {e}")
         return None
     
     # database_status -> {'deployed_at': '2025-04-13T18:23:40.452102Z', 'hours_used': 10.35, 'hours_left': 739.65, 'percentage_used': 1.38, 'estimated_expiration': '2025-05-15 00:23:40 UTC', 'storage_used_percent': 0.048}
