@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # This file contains the main application logic for the web scraping tool.
 
-import time
 import logging
 
 import core.scrapper as scrapper
+import utils.definitions as definitions
 
 
 #### ---------- LOGGING ---------- ####
@@ -48,6 +48,21 @@ def migration_status():
     except Exception as e:
         logger.info(f"❌ There was an error getting the database status: {e}")
         return None
-    finally:
-        scrapper.close_browser(driver)
-    #if database_status
+    
+    # database_status -> {'deployed_at': '2025-04-13T18:23:40.452102Z', 'hours_used': 10.35, 'hours_left': 739.65, 'percentage_used': 1.38, 'estimated_expiration': '2025-05-15 00:23:40 UTC', 'storage_used_percent': 0.048}
+    
+    # Check if the database is near expiration
+    hours_left = database_status['hours_left']
+    percentage_used = database_status['percentage_used']
+    
+    if hours_left > definitions.DB_HOURS_LEFT_THRESHOLD or percentage_used < 0.5:
+        # Database is not near expiration
+        msg = f"✅ Database is running fine. Hours left: {hours_left}. Percentage used: {percentage_used}."
+        logger.info(msg)
+        return {"msg": msg}
+    
+    elif hours_left <= definitions.DB_HOURS_LEFT_THRESHOLD and percentage_used >= 0.5:
+        # Database is near expiration
+        msg = f"⚠️ Database is near expiration. Hours left: {hours_left}. Percentage used: {percentage_used}."
+        logger.info(msg)
+        return {"msg": msg}
