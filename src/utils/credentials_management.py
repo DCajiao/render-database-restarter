@@ -23,7 +23,7 @@ def load_credentials():
     """
     try:
         dotenv.load_dotenv()
-        logger.info("🔄 Loading environment variables...")
+        logger.debug("🔄 Loading environment variables...")
 
         return {
             "EMAIL": os.getenv("RENDER_EMAIL"),

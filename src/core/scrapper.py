@@ -33,7 +33,7 @@ def start_browser():
         webdriver.Chrome: A Selenium WebDriver instance with stealth settings.
     """
     try:
-        logger.info("Starting undetected browser")
+        logger.debug("Starting undetected browser")
         options = uc.ChromeOptions()
         options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
@@ -47,7 +47,7 @@ def start_browser():
         driver = uc.Chrome(options=options, headless=False)
         driver.execute_script(
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        logger.info("✔ Browser started")
+        logger.debug("✔ Browser started")
         return driver
     except Exception as e:
         logger.error(f"Error starting undetected browser: {e}")
@@ -64,7 +64,7 @@ def close_browser(driver):
     #TODO: I have an issue with closing the browser, it doesn't close properly
     try:
         driver.quit()
-        logger.info("✔ Browser closed")
+        logger.debug("✔ Browser closed")
     except Exception as e:
         logger.error(f"Error closing browser: {e}")
 
@@ -89,7 +89,7 @@ def render_login():
             "❌ These environment variables are required: RENDER_EMAIL, RENDER_PASSWORD")
         raise ValueError(
             "❌ Missing environment variables: RENDER_EMAIL, RENDER_PASSWORD")
-    logger.info("✅ Environment variables loaded")
+    logger.debug("✅ Environment variables loaded")
 
     #### ---------- STARTING BROWSER ---------- ####
     driver = start_browser()
@@ -102,27 +102,27 @@ def render_login():
     try:
         # Go to Render login page
         driver.get(definitions.RENDER_LOGIN_URL)
-        logger.info("🔄 Loading login page...")
+        logger.debug("🔄 Loading login page...")
 
         # Wait for email input to load
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.NAME, "email"))
         )
-        logger.info("🔄 Page loaded")
+        logger.debug("🔄 Page loaded")
 
         # Fill fields
         email_input = driver.find_element(By.NAME, "email")
         email_input.send_keys(credentials['EMAIL'])
-        logger.info("🔄 Email filled")
+        logger.debug("🔄 Email filled")
         password_input = driver.find_element(By.NAME, "password")
         password_input.send_keys(credentials['PASSWORD'])
-        logger.info("🔄 Password filled")
+        logger.debug("🔄 Password filled")
 
         # Click on "Sign in" button
         login_button = driver.find_element(
             By.CSS_SELECTOR, '[data-test-id="signin-submit-button"]')
         login_button.click()
-        logger.info("🔄 Sending credentials...")
+        logger.debug("🔄 Sending credentials...")
 
         # Wait for redirection (check that we are no longer on the login page)
         WebDriverWait(driver, 15).until_not(
@@ -174,7 +174,7 @@ def go_to_dashboard(driver):
         webdriver.Chrome: The same instance, now on the dashboard page.
     """
     try:
-        logger.info("🔄 Navigating to the Render dashboard...")
+        logger.debug("🔄 Navigating to the Render dashboard...")
         driver.get(definitions.RENDER_URL)
 
         # Wait for the dashboard to load
@@ -330,7 +330,7 @@ def get_database_status(driver, db_name: str) -> dict:
             'storage_used_percent': float
         }
     """
-    logger.info(f"🔍 Checking status for database '{db_name}'...")
+    logger.debug(f"🔍 Checking status for database '{db_name}'...")
 
     # Retrieve the list of active databases using the existing driver session
     databases = get_active_databases(driver)
@@ -427,7 +427,7 @@ def get_active_database_credentials(driver, db_name: str) -> dict:
         ValueError: If the database name is not found.
     """
 
-    logger.info(f"🔄 Getting credentials for active database '{db_name}'...")
+    logger.debug(f"🔄 Getting credentials for active database '{db_name}'...")
 
     # Navigate to the main dashboard page
     driver = go_to_dashboard(driver)
