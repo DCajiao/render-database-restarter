@@ -1,6 +1,8 @@
 #from flask import Flask, request
 import logging
 import time
+
+import core.app as app
 import core.scrapper as scrapper
 
 
@@ -13,4 +15,4 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-   pass
+    app.migration_status()
