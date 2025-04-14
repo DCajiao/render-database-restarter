@@ -8,3 +8,6 @@ RENDER_URL = "https://dashboard.render.com"
 
 # DATABASE INFO
 DB_MAX_HOURS = 750
+
+# CONFIGURATION
+DB_HOURS_LEFT_THRESHOLD = 24  # Hours left before expiration
